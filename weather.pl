@@ -17,6 +17,9 @@ my %monthlookup = qw(Jan 0 Feb 1 Mar 2 Apr 3 May 4 Jun 5 Jul 6 Aug 7 Sep 8 Oct 9
 my $carbon_port = 2003;
 my $carbon_host = "stats.minear.homeunix.com";
 
+my $mailhost = "mail.minear.homeunix.com";
+my $maildestination = 'dan@minear.name';
+
 if (defined $ARGV[0] && $ARGV[0] eq "graphite" ) {	# put the stored values into graphite
 	my $sock = IO::Socket::INET->new( 
 					PeerAddr => $carbon_host,
@@ -183,12 +186,12 @@ sub trigger {
 		print $fo "TRIGGER!!!\n";
 	}
 	# send email
-	my $smtp = Net::SMTP->new("mail.minear.homeunix.com");
+	my $smtp = Net::SMTP->new($mailhost);
 	if (defined $smtp) {
 		$smtp->mail($ENV{USER});
 		$smtp->to("pager");
 		$smtp->data();
-		$smtp->datasend("To: pager\@minear.homeunix.com\n");
+		$smtp->datasend("To: $maildestination\n");
 		$smtp->datasend("Subject: Sprinkler trigger\n");
 		$smtp->datasend("\n");
 		$smtp->datasend("Sprinkler trigger\n");

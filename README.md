@@ -13,3 +13,4 @@ Seems easy in theory, but in practice it's difficult.
 
 This is my experiment with automated Docker builds.
 
+You can see the program in use at http://www.scrappintwins.com/cgi-bin/getweather.pl

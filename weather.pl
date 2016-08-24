@@ -74,12 +74,13 @@ my %elements = (
 	"suggested_pickup" => "pickup",
 	);
 my $location = "http://www.weather.gov/xml/current_obs/KSLI.xml";
-my $proxy = "http://www-blv-proxy1.boeing.com:31060";
 
 my $myurl = $location;
 my $ua = new LWP::UserAgent; $ua->agent("$0/0.1 " . $ua->agent);
 $ua->agent("Mozilla/8.0");
-# djm $ua->proxy('http', $proxy);
+# my $proxy = "http://proxy.addr.here:8080";
+# $ua->proxy('http', $proxy);
+
 # pretend we are very capable browser
 my $req = new HTTP::Request 'GET' => "$myurl";
 $req->header('Accept' => 'text/xml');
@@ -103,8 +104,6 @@ while (1) {
 			sleep 120;
 			next;
 		}
-		# print Dumper( $x );
-		# exit;
 		my @t = localtime(time);
 		print join( ':',@t[2,1,0]), " ";
 		my $fo = new FileHandle( ">>/tmp/$0"  );

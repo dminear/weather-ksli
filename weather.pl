@@ -107,18 +107,19 @@ while (1) {
 		my @t = localtime(time);
 		print join( ':',@t[2,1,0]), " ";
 		my $fo = new FileHandle( ">>/tmp/$0"  );
-		my $sock = IO::Socket::INET->new(PeerPort => 8125, PeerAddr => 'stats.minear.homeunix.com', Proto => 'udp');
+		my $udpsock = IO::Socket::INET->new(PeerPort => 8125, PeerAddr => 'stats.minear.homeunix.com', Proto => 'udp');
 		if (defined $fo) {	
 			foreach my $i (sort keys( %elements)) {
 				print $elements{$i} . " " . $x->{$i} . ", " if $i =~ /temp|humid|weather|time/;
 
-				$sock->send("weather.KSLI.$i:" . $x->{$i} . "|g\n") if defined $sock && $i =~ /temp|humid/;
+				$udpsock->send("weather.KSLI.$i:" . $x->{$i} . "|g\n") if defined $udpsock && $i =~ /temp|humid/;
 				print $fo $elements{$i} . " " . $x->{$i} . "   ";
 			}		
 
 			print "\n";
 			print $fo "\n";
 		}
+		$udpsock->close if defined $udpsock;
 		#All this means is you got some html back . . .
 
 		$x->{"observation_time_rfc822"} =~ /\w+,\s+(\d+)\s+(\w+)\s+(\d+)\s+(\d+):(\d+):(\d+)/;
@@ -156,7 +157,6 @@ while (1) {
 			}
 		}
 	undef $fo;	# close file
-	close $sock;
 	} else {
 		print "Error: " . $res->status_line . "\n";
 	} 

@@ -1,5 +1,10 @@
 #!/usr/bin/perl -w
+# Program to read KSLI XML weather data.  It writes the XML to memcache for a
+# webserver to pick up, and also sends the temperature and humidity to a
+# redis database.
 #
+# Dan Minear
+
 use strict;
 use XML::Simple;
 use LWP::UserAgent;
@@ -20,14 +25,18 @@ my $carbon_host = "stats.minear.homeunix.com";
 my $mailhost = "mail.minear.homeunix.com";
 my $maildestination = 'dan@minear.name';
 
+# where to grab the weather data
+my $weatherurl = "http://www.weather.gov/xml/current_obs/KSLI.xml";
+
+# this script used to add the readings onto the end of this file, so there was an option to read the data
+# and send it to graphite. We don't append to this script anymore so we could remove this.
+#
 if (defined $ARGV[0] && $ARGV[0] eq "graphite" ) {	# put the stored values into graphite
 	my $sock = IO::Socket::INET->new( 
 					PeerAddr => $carbon_host,
 					PeerPort => $carbon_port,
 					Proto => 'tcp',
-					);
-	die "Cannot open socket: $!" if ! $sock;
-	my $fin = FileHandle->new("/tmp/$0") || die "Cannot read /tmp/$0: $!";
+					) or die "Cannot open socket: $!";
 
 	while(<DATA>) {
 		chomp;
@@ -56,7 +65,7 @@ if (defined $ARGV[0] && $ARGV[0] eq "graphite" ) {	# put the stored values into 
 	exit 0;
 }
 
-
+# connect to memcache
 my $memd = new Cache::Memcached {
 	'servers' => [ "192.168.0.30:11211" ],
 	'debug' => 0,
@@ -73,16 +82,14 @@ my %elements = (
 	"suggested_pickup_period" => "pickper",
 	"suggested_pickup" => "pickup",
 	);
-my $location = "http://www.weather.gov/xml/current_obs/KSLI.xml";
 
-my $myurl = $location;
 my $ua = new LWP::UserAgent; $ua->agent("$0/0.1 " . $ua->agent);
 $ua->agent("Mozilla/8.0");
 # my $proxy = "http://proxy.addr.here:8080";
 # $ua->proxy('http', $proxy);
 
 # pretend we are very capable browser
-my $req = new HTTP::Request 'GET' => "$myurl";
+my $req = new HTTP::Request 'GET' => "$weatherurl";
 $req->header('Accept' => 'text/xml');
 
 my $last_time = Date_to_Time( Today_and_Now() );
@@ -100,26 +107,30 @@ while (1) {
 		eval { $x = XMLin( $res->content );
 			$memd->set("weather", $res->content);
 		};
-		if ($@) {
+		if ($@) {	# error
 			sleep 120;
-			next;
+			next;	# try again
 		}
 		my @t = localtime(time);
 		print join( ':',@t[2,1,0]), " ";
-		my $fo = new FileHandle( ">>/tmp/$0"  );
-		my $udpsock = IO::Socket::INET->new(PeerPort => 8125, PeerAddr => 'stats.minear.homeunix.com', Proto => 'udp');
-		if (defined $fo) {	
-			foreach my $i (sort keys( %elements)) {
-				print $elements{$i} . " " . $x->{$i} . ", " if $i =~ /temp|humid|weather|time/;
+		my $fo = new FileHandle( "/tmp/$0.txt", "w") or warn "Cannot write to /tmp/$0.txt\n";
+		my $udpsock = IO::Socket::INET->new(
+			PeerPort => 8125,
+			PeerAddr => 'stats.minear.homeunix.com',
+			Proto => 'udp') or warn "Cannot connect to udp socket\n";
 
-				$udpsock->send("weather.KSLI.$i:" . $x->{$i} . "|g\n") if defined $udpsock && $i =~ /temp|humid/;
-				print $fo $elements{$i} . " " . $x->{$i} . "   ";
-			}		
+		foreach my $i (sort keys( %elements)) {
+			print $elements{$i} . " " . $x->{$i} . ", " if $i =~ /temp|humid|weather|time/;
 
-			print "\n";
-			print $fo "\n";
-		}
+			$udpsock->send("weather.KSLI.$i:" . $x->{$i} . "|g\n") if defined $udpsock && $i =~ /temp|humid/;
+			print $fo $elements{$i} . " " . $x->{$i} . "   " if defined $fo;
+		}		
+
+		print "\n";
+		print $fo "\n" if defined $fo;
+
 		$udpsock->close if defined $udpsock;
+
 		#All this means is you got some html back . . .
 
 		$x->{"observation_time_rfc822"} =~ /\w+,\s+(\d+)\s+(\w+)\s+(\d+)\s+(\d+):(\d+):(\d+)/;
@@ -143,7 +154,7 @@ while (1) {
 			# check weather for rain
 			if ($x->{weather} =~ /Rain/) {
 				print "Rain in weather, resetting.\n";
-				print $fo "Rain in weather, resetting integrated dryness.\n";
+				print $fo "Rain in weather, resetting integrated dryness.\n" if defined $fo;
 				$integrated_dry = 0;
 			}
 
@@ -156,35 +167,35 @@ while (1) {
 				$integrated_dry = 0;	# reset
 			}
 		}
-	undef $fo;	# close file
+		undef $fo;	# close file
+
+		if ($x->{suggested_pickup_period} > 0) {
+			# figure wait time
+			my $minutes = (Localtime())[4];
+			#print "current minutes is $minutes\n";
+			$x->{suggested_pickup} =~ /(\d+)/;
+			my $sugg_pickup = $1;
+			my $minutes_to_pickup = $x->{suggested_pickup_period} - $minutes + $sugg_pickup;
+			if ($minutes_to_pickup > $x->{suggested_pickup_period} - 1 + $sugg_pickup) {
+				$minutes_to_pickup -= $x->{suggested_pickup_period};
+			}
+			# randomize the pickup a little
+			my $sleeptime = $minutes_to_pickup * 60 + int(rand(300)) + 120;
+			#print "sleeping suggested time of " . $sleeptime / 60 . " minutes\n";
+			sleep $sleeptime;
+		} else {
+			sleep 3600;		# sleep an hour
+		}
 	} else {
 		print "Error: " . $res->status_line . "\n";
-	} 
-	if ($x->{suggested_pickup_period} > 0) {
-		# figure wait time
-		my $minutes = (Localtime())[4];
-		#print "current minutes is $minutes\n";
-		$x->{suggested_pickup} =~ /(\d+)/;
-		my $sugg_pickup = $1;
-		my $minutes_to_pickup = $x->{suggested_pickup_period} - $minutes + $sugg_pickup;
-		if ($minutes_to_pickup > $x->{suggested_pickup_period} - 1 + $sugg_pickup) {
-			$minutes_to_pickup -= $x->{suggested_pickup_period};
-		}
-		# randomize the pickup a little
-		my $sleeptime = $minutes_to_pickup * 60 + int(rand(300)) + 120;
-		#print "sleeping suggested time of " . $sleeptime / 60 . " minutes\n";
-		sleep $sleeptime;
-	} else {
-		sleep 3600;
 	}
 }
 
 sub trigger {
 	my $fo = shift;
-	print "TRIGGER!!!!\n";	
-	if(defined $fo) {
-		print $fo "TRIGGER!!!\n";
-	}
+	print "TRIGGER!!!!\n";
+	print $fo "TRIGGER!!!\n" if defined $fo;
+
 	# send email
 	my $smtp = Net::SMTP->new($mailhost);
 	if (defined $smtp) {
@@ -198,7 +209,7 @@ sub trigger {
 		$smtp->dataend();
 		$smtp->quit;
 	} else {
-		print $fo "Could not mail, bummer.\n";
+		print $fo "Could not mail, bummer.\n" if defined $fo;
 	}
 }
 

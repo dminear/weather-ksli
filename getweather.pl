@@ -7,13 +7,16 @@
 use Cache::Memcached;
 
 my $memd = new Cache::Memcached {
-        'servers' => [ "localhost:11211" ],
-        'debug' => 0,
-        };
+	'servers' => [ "localhost:11211" ],
+	'debug' => 0,
+};
 
 my $w = $memd->get("weather");
 
 print "Content-type: text/xml\n\n";
 
-print "$w" if $w;
-print "Nothing found\n" if ! $w;
+if ($w) {
+	print $w;
+} else {
+	print "Nothing found\n";
+}

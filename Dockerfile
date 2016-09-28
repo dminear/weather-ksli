@@ -8,4 +8,5 @@ RUN cpan -f Date::Calc
 RUN cpan Cache::Memcached
 COPY weather.pl  /usr/local/bin/
 RUN chmod +x /usr/local/bin/weather.pl
+RUN chmod 777 /tmp
 CMD ["perl", "/usr/local/bin/weather.pl"]

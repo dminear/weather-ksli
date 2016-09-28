@@ -113,10 +113,11 @@ while (1) {
 		}
 		my @t = localtime(time);
 		print join( ':',@t[2,1,0]), " ";
-		my $fo = new FileHandle( "/tmp/$0.txt", "w") or warn "Cannot write to /tmp/$0.txt\n";
+		my $fo = new FileHandle( ">>/tmp/$$.txt") or warn "Cannot append to /tmp/$$.txt\n";
 		my $udpsock = IO::Socket::INET->new(
 			PeerPort => 8125,
-			PeerAddr => 'stats.minear.homeunix.com',
+			#PeerAddr => 'stats.minear.homeunix.com',
+			PeerAddr => '192.168.0.30',
 			Proto => 'udp') or warn "Cannot connect to udp socket\n";
 
 		foreach my $i (sort keys( %elements)) {

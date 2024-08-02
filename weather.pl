@@ -20,9 +20,10 @@ use Time::Local;
 my %monthlookup = qw(Jan 0 Feb 1 Mar 2 Apr 3 May 4 Jun 5 Jul 6 Aug 7 Sep 8 Oct 9 Nov 10 Dec 11);
 
 my $carbon_port = 2003;
-my $carbon_host = "stats.minear.homeunix.com";
+my $carbon_host = "ops.scrappintwins.com.lan";
 
-my $mailhost = "mail.minear.homeunix.com";
+
+my $mailhost = "mail.scrappintwins.com";
 my $maildestination = 'dan@minear.name';
 
 # where to grab the weather data
@@ -67,7 +68,7 @@ if (defined $ARGV[0] && $ARGV[0] eq "graphite" ) {	# put the stored values into 
 
 # connect to memcache
 my $memd = new Cache::Memcached {
-	'servers' => [ "192.168.0.30:11211" ],
+	'servers' => [ "ops.scrappintwins.com.lan:11211" ],
 	'debug' => 0,
 	};
 
@@ -117,7 +118,7 @@ while (1) {
 		my $udpsock = IO::Socket::INET->new(
 			PeerPort => 8125,
 			#PeerAddr => 'stats.minear.homeunix.com',
-			PeerAddr => '192.168.0.30',
+			PeerAddr => 'ops.scrappintwins.com.lan',
 			Proto => 'udp') or warn "Cannot connect to udp socket\n";
 
 		foreach my $i (sort keys( %elements)) {

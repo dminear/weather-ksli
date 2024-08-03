@@ -20,7 +20,7 @@ use Time::Local;
 my %monthlookup = qw(Jan 0 Feb 1 Mar 2 Apr 3 May 4 Jun 5 Jul 6 Aug 7 Sep 8 Oct 9 Nov 10 Dec 11);
 
 my $carbon_port = 2003;
-my $carbon_host = "ops.scrappintwins.com.lan";
+my $carbon_host = "carbonhost.lan";
 
 
 my $mailhost = "mail.scrappintwins.com";

@@ -26,10 +26,7 @@ my $debug = 0;
 my $redishost = $ENV{'REDISHOST'} || 'localhost';
 my $memcachehost = $ENV{'MEMCACHEHOST'} || 'localhost';
 my $web = $ENV{'WEB'} || 'local';
-<<<<<<< HEAD
 
-=======
->>>>>>> 39402f23debaced9de24885da5a61e1fd204fb9e
 if ($web eq 'local') {
 	print "Using local data file\n";
 } else {
@@ -112,11 +109,7 @@ while (1) {
 			print "\n\nsetting redis...\n\n";
 			foreach (keys %$x)  {
 				#print "key ", $_, " value ",  $x->{$_}, "\n";
-<<<<<<< HEAD
 				$redis->hset('weather', $_, $x->{$_} );
-=======
-				$redis->hset('weather', $_, $x->{$_} ) ;
->>>>>>> 39402f23debaced9de24885da5a61e1fd204fb9e
 			}
 			print "done\n";
 		#};
@@ -143,15 +136,9 @@ while (1) {
 			undef $fo;	# close file
 		}
 
-<<<<<<< HEAD
 		#print ">>>>>>>>>>>> memcache value for key weather is:\n" . $memd->get("weather");
 
 		#print ">>>>>>>>>>>> redis hash is\n" . Dumper($redis->hgetall('weather'));
-=======
-		print ">>>>>>>>>>>> memcache value for key weather is:\n" . $memd->get("weather");
-
-		print ">>>>>>>>>>>> redis hash is\n" . Dumper($redis->hgetall('weather'));
->>>>>>> 39402f23debaced9de24885da5a61e1fd204fb9e
 
 
 		# wait for the next time
@@ -160,27 +147,17 @@ while (1) {
 			my $minutes = (Localtime())[4];
 			#print "current minutes is $minutes\n";
 			$x->{suggested_pickup} =~ /(\d+)/;
-<<<<<<< HEAD
 			my $sugg_pickup = $1;		# what minute in the hour
-=======
-			my $sugg_pickup = $1;
->>>>>>> 39402f23debaced9de24885da5a61e1fd204fb9e
 			my $minutes_to_pickup = $x->{suggested_pickup_period} - $minutes + $sugg_pickup;
 			if ($minutes_to_pickup > $x->{suggested_pickup_period} - 1 + $sugg_pickup) {
 				$minutes_to_pickup -= $x->{suggested_pickup_period};
 			}
 			# randomize the pickup a little
 			my $sleeptime = $minutes_to_pickup * 60 + int(rand(300)) + 120;
-<<<<<<< HEAD
 			print "sleeping suggested time of " . $sleeptime / 60 . " minutes\n";
 			sleep $sleeptime;
 		} else {
 			print "waiting for an hour...\n";
-=======
-			#print "sleeping suggested time of " . $sleeptime / 60 . " minutes\n";
-			sleep $sleeptime;
-		} else {
->>>>>>> 39402f23debaced9de24885da5a61e1fd204fb9e
 			sleep 3600;		# sleep an hour
 		}
 	} else {

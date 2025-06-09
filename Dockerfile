@@ -18,5 +18,8 @@ COPY w_test.pl  /usr/local/bin/
 RUN chmod +x /usr/local/bin/weather.pl
 RUN chmod +x /usr/local/bin/w_test.pl
 RUN chmod 777 /tmp
+<<<<<<< HEAD
 #CMD ["perl", "/usr/local/bin/weather.pl"]
+=======
+>>>>>>> 39402f23debaced9de24885da5a61e1fd204fb9e
 CMD ["perl", "/usr/local/bin/w_test.pl"]

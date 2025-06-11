@@ -11,6 +11,7 @@ RUN cpanm Redis::Client
 RUN cpanm LWP::UserAgent
 RUN cpanm LWP::Protocol::https
 RUN cpanm Net::SSLeay
+RUN cpanm File::Slurp
 RUN cpanm -f Date::Calc
 RUN cpanm Cache::Memcached
 COPY weather.pl  /usr/local/bin/

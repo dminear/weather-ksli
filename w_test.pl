@@ -18,7 +18,7 @@ use Cache::Memcached;
 use IO::Socket::INET;
 use Time::Local;
 use Redis::Client;
-use Carp;
+use File::Slurp;
 use Env;
 
 my $debug = 0;
@@ -72,29 +72,31 @@ $ua->agent("Mozilla/8.0");
 # my $proxy = "http://proxy.addr.here:8080";
 # $ua->proxy('http', $proxy);
 
-# pretend we are very capable browser
-my $req = new HTTP::Request 'GET' => "$weatherurl";
-$req->header('Accept' => 'text/xml');
-
 my $last_time = Date_to_Time( Today_and_Now() );
 my $x;
 
 #print "\n\ncontent is\n\n" . Dumper(@content);
 
 while (1) {
-	#send request
+	# pretend we are very capable browser
+	my $req = new HTTP::Request 'GET' => "$weatherurl";
+	$req->header('Accept' => 'text/xml');	#send request
+
 	my $res = $ua->request($req);
 	#check the outcome
 	if ($res->is_success || defined $content[0] ) {
-		eval {
+		#eval {
 			if (defined $content[0]) {
 				$x = XMLin( join "", @content );
-				#print "content:", Dumper($x);
 				print "setting memcache...\n";
 				$memd->set("weather", join "", @content);
 			} else {
-				print "\n\nusing web!\n\n";
-				$x = XMLin( $res->content );
+				print "using web request\n";
+				if (write_file('bob.xml', $res->content)) {
+					$x = XMLin( 'bob.xml', KeyAttr => 'current_observation' );
+				} else {
+					warn "Could not write temp file for XML slurping\n";
+				}
 				print "setting memcache...\n";
 				$memd->set("weather", $res->content);
 
@@ -103,19 +105,24 @@ while (1) {
 				$res = $ua->request($req);
 
 				if($res->is_success) {
+=comment
+response looks like:
+734
+SAXX60 KWBC 112100 RRC
+MTRSLI
+METAR KSLI 112055Z 20010KT 7SM FEW020 SCT180 BKN250 24/16 A2987 RMK AO2A
+SLP118 T02390159 57010
+=cut
 					$redis->hset('weather', 'METAR', grep( /^METAR/, split( /\n/, $res->content )));
 				}
 			}
-			print "\n\nsetting redis...\n\n";
+			print "setting redis...\n";
 			foreach (keys %$x)  {
 				#print "key ", $_, " value ",  $x->{$_}, "\n";
 				$redis->hset('weather', $_, $x->{$_} );
 			}
-			print "done\n";
-		};
-		#print "Content: " . $res->content;
-		#print Dumper( $x );
-
+		#};
+		
 		if ($@) {	# error
 			print "error retrieving page, waiting...\n";
 			sleep 120;

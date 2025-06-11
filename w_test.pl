@@ -86,7 +86,7 @@ while (1) {
 	my $res = $ua->request($req);
 	#check the outcome
 	if ($res->is_success || defined $content[0] ) {
-		#eval {
+		eval {
 			if (defined $content[0]) {
 				$x = XMLin( join "", @content );
 				#print "content:", Dumper($x);
@@ -112,7 +112,7 @@ while (1) {
 				$redis->hset('weather', $_, $x->{$_} );
 			}
 			print "done\n";
-		#};
+		};
 		#print "Content: " . $res->content;
 		#print Dumper( $x );
 
